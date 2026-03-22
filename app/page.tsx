@@ -25,6 +25,7 @@ function CompanyListInner() {
   const typeFilter   = searchParams.get('type') ?? ''
   const jurFilter    = searchParams.get('jurisdiction') ?? ''
   const showRejected = searchParams.get('show_rejected') === '1'
+  const searchQuery  = searchParams.get('q') ?? ''
 
   const [companies, setCompanies] = useState<Company[]>([])
   const [loading, setLoading]     = useState(true)
@@ -53,6 +54,16 @@ function CompanyListInner() {
     setLoading(false)
   }, [stageFilter, typeFilter, jurFilter, showRejected])
 
+  const visibleCompanies = searchQuery
+    ? companies.filter((c) => {
+        const q = searchQuery.toLowerCase()
+        return (
+          c.name.toLowerCase().includes(q) ||
+          (c.ticker ?? '').toLowerCase().includes(q)
+        )
+      })
+    : companies
+
   useEffect(() => { fetchCompanies() }, [fetchCompanies])
 
   function setParam(key: string, value: string | null) {
@@ -79,6 +90,14 @@ function CompanyListInner() {
 
       {/* Filters */}
       <div className="border-b border-gray-100 px-6 py-2.5 flex flex-wrap items-center gap-2 bg-gray-50">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setParam('q', e.target.value || null)}
+          placeholder="Search companies…"
+          className="text-xs border border-gray-300 px-2 py-1 bg-white text-gray-700 w-44 focus:outline-none focus:border-gray-500"
+        />
+        <div className="w-px h-4 bg-gray-300 mx-1" />
         <button
           onClick={() => setParam('stage', null)}
           className={`text-xs px-3 py-1 border ${!stageFilter ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-300 hover:border-gray-500'}`}
@@ -140,11 +159,11 @@ function CompanyListInner() {
 
         {loading ? (
           <div className="text-sm text-gray-400 py-12 text-center">Loading…</div>
-        ) : companies.length === 0 ? (
+        ) : visibleCompanies.length === 0 ? (
           <div className="text-sm text-gray-400 py-12 text-center">
-            {stageFilter || typeFilter || jurFilter
-              ? 'No companies match your filters.'
-              : "No companies yet. Click '+ Add Company' to get started."}
+            {companies.length === 0
+              ? "No companies yet. Click '+ Add Company' to get started."
+              : 'No companies match your search.'}
           </div>
         ) : (
           <>
@@ -158,7 +177,7 @@ function CompanyListInner() {
                 </tr>
               </thead>
               <tbody>
-                {companies.map((c) => (
+                {visibleCompanies.map((c) => (
                   <tr key={c.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-2.5 pr-4">
                       <Link href={`/companies/${c.id}`} className="font-medium text-gray-900 hover:underline underline-offset-2">
@@ -181,7 +200,9 @@ function CompanyListInner() {
                 ))}
               </tbody>
             </table>
-            <p className="mt-3 text-xs text-gray-400">{companies.length} {companies.length === 1 ? 'company' : 'companies'}</p>
+            <p className="mt-3 text-xs text-gray-400">
+              {visibleCompanies.length}{visibleCompanies.length !== companies.length ? ` of ${companies.length}` : ''} {companies.length === 1 ? 'company' : 'companies'}
+            </p>
           </>
         )}
       </div>
